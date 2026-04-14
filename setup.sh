@@ -1,74 +1,106 @@
 #!/bin/bash
 
-set -e
+set -euo pipefail
 
 DOTFILES_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 echo "🚀 Setting up dev environment..."
 
-# Homebrew
-if ! command -v brew >/dev/null 2>&1; then
+install_homebrew() {
+  if command -v brew >/dev/null 2>&1; then
+    echo "✅ Homebrew already installed"
+    return
+  fi
+
   echo "📦 Installing Homebrew..."
   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
   if [[ -x /opt/homebrew/bin/brew ]]; then
-    echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> "$HOME/.zprofile"
     eval "$(/opt/homebrew/bin/brew shellenv)"
   elif [[ -x /usr/local/bin/brew ]]; then
-    echo 'eval "$(/usr/local/bin/brew shellenv)"' >> "$HOME/.zprofile"
     eval "$(/usr/local/bin/brew shellenv)"
+  else
+    echo "❌ Homebrew installed but brew binary was not found"
+    exit 1
   fi
-else
-  echo "✅ Homebrew already installed"
-fi
+}
 
-# Load Homebrew into current shell
-if [[ -x /opt/homebrew/bin/brew ]]; then
-  eval "$(/opt/homebrew/bin/brew shellenv)"
-elif [[ -x /usr/local/bin/brew ]]; then
-  eval "$(/usr/local/bin/brew shellenv)"
-fi
+load_homebrew() {
+  if [[ -x /opt/homebrew/bin/brew ]]; then
+    eval "$(/opt/homebrew/bin/brew shellenv)"
+  elif [[ -x /usr/local/bin/brew ]]; then
+    eval "$(/usr/local/bin/brew shellenv)"
+  else
+    echo "❌ Homebrew is not available in this shell"
+    exit 1
+  fi
+}
 
-# Oh My Zsh
-if [[ ! -d "$HOME/.oh-my-zsh" ]]; then
+install_oh_my_zsh() {
+  if [[ -d "$HOME/.oh-my-zsh" ]]; then
+    echo "✅ Oh My Zsh already installed"
+    return
+  fi
+
   echo "⚡ Installing Oh My Zsh..."
   RUNZSH=no CHSH=no sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
-else
-  echo "✅ Oh My Zsh already installed"
-fi
+}
 
-# Powerlevel10k
-P10K_DIR="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k"
-if [[ ! -d "$P10K_DIR" ]]; then
+install_powerlevel10k() {
+  local p10k_dir="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k"
+
+  if [[ -d "$p10k_dir" ]]; then
+    echo "✅ Powerlevel10k already installed"
+    return
+  fi
+
   echo "🎨 Installing Powerlevel10k..."
-  git clone --depth=1 https://github.com/romkatv/powerlevel10k.git "$P10K_DIR"
-else
-  echo "✅ Powerlevel10k already installed"
-fi
+  git clone --depth=1 https://github.com/romkatv/powerlevel10k.git "$p10k_dir"
+}
 
-# Font
-echo "🔤 Installing Meslo font for Powerlevel10k..."
-brew install --cask font-meslo-for-powerlevel10k || true
+install_font() {
+  echo "🔤 Installing Meslo font for Powerlevel10k..."
+  brew install --cask font-meslo-for-powerlevel10k
+}
 
-# Zsh plugins
-echo "🔌 Installing Zsh plugins..."
-brew install zsh-autosuggestions zsh-syntax-highlighting
+install_zsh_plugins() {
+  echo "🔌 Installing Zsh plugins..."
+  brew install zsh-autosuggestions zsh-syntax-highlighting
+}
 
-# Node tools
-echo "🟢 Installing Node tools..."
-brew install nvm
+install_nvm() {
+  echo "🟢 Installing NVM..."
+  brew install nvm
+}
 
-# Bun
-echo "🥟 Installing Bun..."
-brew install bun
+copy_config_files() {
+  echo "📄 Copying config files..."
 
-# Copy config files
-echo "📄 Copying config files..."
-cp -f "$DOTFILES_DIR/.zshrc" "$HOME/.zshrc"
-cp -f "$DOTFILES_DIR/.p10k.zsh" "$HOME/.p10k.zsh"
+  if [[ ! -f "$DOTFILES_DIR/.zshrc" ]]; then
+    echo "❌ Missing file: $DOTFILES_DIR/.zshrc"
+    exit 1
+  fi
+
+  if [[ ! -f "$DOTFILES_DIR/.p10k.zsh" ]]; then
+    echo "❌ Missing file: $DOTFILES_DIR/.p10k.zsh"
+    exit 1
+  fi
+
+  cp -f "$DOTFILES_DIR/.zshrc" "$HOME/.zshrc"
+  cp -f "$DOTFILES_DIR/.p10k.zsh" "$HOME/.p10k.zsh"
+}
+
+install_homebrew
+load_homebrew
+install_oh_my_zsh
+install_powerlevel10k
+install_font
+install_zsh_plugins
+install_nvm
+copy_config_files
 
 echo ""
-echo "✅ Setup complete!"
+echo "✅ Setup complete"
 echo ""
 echo "Next steps:"
 echo "1. Open iTerm2"
